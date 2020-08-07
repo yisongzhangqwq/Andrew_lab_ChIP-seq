@@ -1,0 +1,34 @@
+onePeakSetFN = c("rep1hichippeaks.bed","rep2hichippeaks.bed", "rep1eachall.bed", "rep2eachall.bed", "rep1eachself.bed" ,"rep2eachself.bed" , "rep12combinedself.bed","rep12combinedall.bed","EpiLC_minusActivin.bed","EpiLC_plusActivin.bed","ESC_rep12.bed")
+anotherPeakSetFN =c("rep1hichippeaks.bed","rep2hichippeaks.bed", "rep1eachall.bed", "rep2eachall.bed", "rep1eachself.bed" ,"rep2eachself.bed" , "rep12combinedself.bed","rep12combinedall.bed","EpiLC_minusActivin.bed","EpiLC_plusActivin.bed","ESC_rep12.bed")
+overlapRateMat = matrix(nrow=length(onePeakSetFN), ncol=length(anotherPeakSetFN))
+ 
+for (i in 1:length(onePeakSetFN)) {
+   onePeakSet = read.table(onePeakSetFN[i], sep='\t')
+   onePeakSet_gr = GRanges(onePeakSet[,1], IRanges(onePeakSet[,2], onePeakSet[,3]))
+   
+   for(j in 1:length(anotherPeakSetFN)) {
+   
+      anotherPeakSet = read.table(anotherPeakSetFN[j], sep='\t')
+
+      anotherPeakSet_gr = GRanges(anotherPeakSet[,1], IRanges(anotherPeakSet[,2], anotherPeakSet[,3]))
+
+      overlapMat = as.matrix(findOverlaps(onePeakSet_gr, anotherPeakSet_gr))
+      
+      overlapNum = length(unique(overlapMat[,1])) + length(unique(overlapMat[,2]))
+      
+      overlapNumPC = overlapNum/(length(onePeakSet_gr) + length(anotherPeakSet_gr))
+      
+      overlapRateMat[i,j] = overlapNumPC
+      
+   }
+   
+ }
+
+
+ write.table(overlapRateMat, file='overlapRateMat_4_18.txt', quote=F, sep='\t')
+ rownames(overlapRateMat)=c('rep1hichippeaks','rep2hichippeaks', 'rep1eachall', 'rep2eachall', 'rep1eachself' ,'rep2eachself' , 'rep12combinedself','rep12combinedall','H3K27ac_EpiLC_minusActivin','H3K27ac_EpiLC_plusActivinA','H3K27ac_ESC_rep12')
+ colnames(overlapRateMat)=c('rep1hichippeaks.bed','rep2hichippeaks.bed', 'rep1eachall.bed', 'rep2eachall.bed', 'rep1eachself.bed' ,'rep2eachself.bed' , 'rep12combinedself.bed','rep12combinedall.bed','H3K27ac_EpiLC_minusActivin.bed','H3K27ac_EpiLC_plusActivinA.bed','H3K27ac_ESC_rep12.bed')
+
+
+library(GenomicRanges)
+
