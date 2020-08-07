@@ -1,0 +1,29 @@
+##convert SRR file to fastq.
+fastq-dump -o ./ --gzip --split-files H3K27ac_ESC_rep1
+
+## trimmed fastq files
+java -jar /mnt/fls01-home01/q66748yz/Trimmomatic/Trimmomatic-0.39/trimmomatic-0.39.jar SE /mnt/fls01-home01/q66748yz/dump/H3K27ac_EpiLC_plusActivin_1.fastq.gz  H3K27ac_EpiLC_plusActivin_tri2.fastq.gz  ILLUMINACLIP:/mnt/fls01-home01/q66748yz/Trimmomatic/Trimmomatic-0.39/NexteraPE-PE.fa:2:30:10:2:keepBothReads LEADING:3 TRAILING:5 SLIDINGWINDOW:4:15 MINLEN:25
+
+#build index for bowtie2
+bowtie2-build mm9.fa mm9.fa
+
+## Bowtie2 mapping
+/opt/gridware/depots/8e896c5a/el7/pkg/apps/bowtie2/2.3.0/gcc-4.8.5/bowtie2   -N 1 -I 0 -X 2000 --dovetail -x mm9.fa -U /mnt/fls01-home01/q66748yz/bowtie2_1/H3K27ac_EpiLC_plusActivin_tri2.fastq.gz -S H3K27ac_EpiLC_plusActivin_tri2.sam
+
+## Convert the sam file to bam file
+samtools view -SbhF 4 /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/H3K27ac_EpiLC_plusActivin_tri2.sam  > /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/H3K27ac_EpiLC_plusActivin_tri2.bam
+
+# remove blacklisted regions
+intersectBed -v -abam /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/H3K27ac_EpiLC_minusActivin_rmblack.bam -b /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/mm9-blacklist.bed > H3K27ac_EpiLC_minusActivin_tri2.bam
+
+# sort bam files:
+samtools sort /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/H3K27ac_EpiLC_minusActivin_rmblack.bam > /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/H3K27ac_EpiLC_plusActivin_tri2_sorted.bam
+
+# mark duplicates
+java -Xmx2g -jar /mnt/as01-data01/account_archive/mqbpjkn2/packages/picard-tools-1.115/MarkDuplicates.jar INPUT=/mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/INPUT_ESC_rep2_sorted.bam  OUTPUT=/mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/INPUT_ESC_rep2_sorted_nodup.bam REMOVE_DUPLICATES=true METRICS_FILE=/mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/INPUT_ESC_rep2_sorted_nodup_stats
+
+#fix isize
+python /mnt/fls01-home01/mqbpwso2/Scripts/Python_scripts/fix_isize.py /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/INPUT_ESC_rep2_sorted_nodup.bam /mnt/fls01-home01/q66748yz/bowtie2_1/samtobam/INPUT_ESC_rep2_sorted_nodup_fixed.bam
+
+#call peak
+macs2 callpeak -t H3K27ac_ESC_rep2_sorted_nodup_fixed.bam -c INPUT_ESC_rep2_sorted_nodup_fixed.bam  -f BAM -g mm -n INPUT_ESC_rep2 -B -q 0.01
